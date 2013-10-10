@@ -1,0 +1,34 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<XMLDB PATH="lib/db" VERSION="2012062602" COMMENT="XMLDB file for Mahara SWORD repository table"
+    xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+    xsi:noNamespaceSchemaLocation="../../../lib/xmldb/xmldb.xsd"
+>
+<TABLES>
+    <TABLE NAME="export_sword_repository">
+        <FIELDS>
+            <FIELD NAME="repository" TYPE="int" LENGTH="10" SEQUENCE="true" NOTNULL="true" />
+            <FIELD NAME="title" TYPE="char" LENGTH="100" NOTNULL="false" />
+            <FIELD NAME="servicedocumenturi" TYPE="text" NOTNULL="false" />
+            <FIELD NAME="username" TYPE="char" LENGTH="100" NOTNULL="false" />
+            <FIELD NAME="password" TYPE="char" LENGTH="100" NOTNULL="false" />
+            <FIELD NAME="onbehalfof" TYPE="char" LENGTH="100" NOTNULL="false" />
+            <FIELD NAME="swordversion" TYPE="char" LENGTH="10" NOTNULL="false" />
+            <FIELD NAME="hasdefaultcollection" TYPE="int" LENGTH="1" DEFAULT="0" SEQUENCE="false" NOTNULL="false" />
+            <FIELD NAME="defaultcollection" TYPE="char" LENGTH="255" NOTNULL="false" />
+        </FIELDS>
+        <KEYS>
+            <KEY NAME="repositorypk" TYPE="primary" FIELDS="repository" />
+        </KEYS>
+    </TABLE>
+    <TABLE NAME="export_sword_customlicence">
+        <FIELDS>
+            <FIELD NAME="licence" TYPE="int" LENGTH="10" SEQUENCE="true" NOTNULL="true" />
+            <FIELD NAME="title" TYPE="char" LENGTH="255" NOTNULL="true" />
+            <FIELD NAME="uri" TYPE="text" NOTNULL="true" />
+        </FIELDS>
+        <KEYS>
+            <KEY NAME="licencepk" TYPE="primary" FIELDS="licence" />
+        </KEYS>
+    </TABLE>
+</TABLES>
+</XMLDB>
