@@ -50,7 +50,7 @@ if (!is_executable(get_config('pathtozip'))) {
 foreach ($exportplugins as $plugin) {
     safe_require('export', $plugin->name);
     $remoteexport = call_static_method(generate_class_name('export', $plugin->name), 'has_remote_target');
-    if (!$remoteexport){
+    if ($remoteexport){
         $exportoptions[$plugin->name] = array(
             'text' => call_static_method(generate_class_name('export', $plugin->name), 'get_title'),
             'description' => call_static_method(generate_class_name('export', $plugin->name), 'get_description'),
@@ -58,42 +58,102 @@ foreach ($exportplugins as $plugin) {
     }
 }
 
+$repositories = get_records_array('export_sword_repository');
+if (!$repositories){
+    $repooptions = array(0 => 'No repositories added');
+}
+else {
+    $repooptions[0] = 'Please select a repository...';
+    foreach ($repositories as $repo){
+        $repooptions[$repo->repository] = $repo->title;
+    }
+    $defaultrepo = array_keys($repooptions);
+    $defaultrepo = $defaultrepo[0];
+}
+
+$collectionoptions = array(0 => 'No collection selected', 1 => 'No collection selected');
+
+$cclicences = array();
+$customlicences = get_records_array('export_sword_customlicence');
+foreach ($customlicences as $customlicence){
+    $licenceoptions[$customlicence->licence] = $customlicence->title;
+}
+$defaultlicence = array_keys($licenceoptions);
+$defaultlicence = $defaultlicence[0];
+$configdefaultlicence = get_config('swordexportdefaultlicence');
+if ($configdefaultlicence){
+    $defaultlicence = $configdefaultlicence;
+}
+
 $elements = array(
     'format' => array(
         'type' => 'radio',
         'options' => $exportoptions,
-        'defaultvalue' => 'html',
+        'defaultvalue' => 'sword',
         'separator' => '</div><div>',
+    ),
+    'metadatatitle' => array(
+            'type' => 'text',
+            'title' => 'Title',
+            'description' => 'If this field is left empty, the title will be taken from the first page in the package.',
+            'size' => 50,
+            'defaultvalue' => '',
+    ),
+    'metadataabstract' => array(
+            'type' => 'textarea',
+            'title' => 'Description',
+            'description' => 'If this field is left empty, the description will be taken from the description in the first page in the package, if it is set.',
+            'cols'  => 80,
+            'rows'  => 4,
+            'rules' => array('maxlength' => 65536),
+            'resizable' => false,
+    ),
+    'repositories' => array(
+        'type' => 'select',
+        'options' => $repooptions,
+        'defaultvalue' => $defaultrepo,
+    ),
+    'collections' => array(
+            'type' => 'select',
+            'options' => $collectionoptions,
+            'defaultvalue' => 0,
+    ),
+    'licences' => array(
+            'type' => 'select',
+            'options' => $licenceoptions,
+            'defaultvalue' => $defaultlicence,
     ),
     'what' => array(
         'type' => 'radio',
         'options' => array(
-            'all' => get_string('allmydata', 'export'),
-            'views' => get_string('justsomeviews', 'export'),
+            'all' => get_string('allmypublicdata', 'export'),
+            'views' => get_string('justsomepublicviews', 'export'),
         ),
         'separator' => '</div><div>',
         'defaultvalue' => 'all',
     ),
-    'includefeedback' => array(
-        'type' => 'checkbox',
-        'title' => get_string('includefeedback', 'export'),
-        'description' => get_string('includefeedbackdescription', 'export'),
-        'separator' => '</div><div>',
-        'defaultvalue' => 1,
-    ),
 );
 
-if ($viewids = get_column('view', 'id', 'owner', $USER->get('id'), 'type', 'portfolio')) {
+$viewids = get_records_sql_array("
+        SELECT va.view
+        FROM {view} v, {view_access} va
+        WHERE v.owner = ?
+        AND va.view = v.id
+        AND va.accesstype = 'public'
+        GROUP BY va.view
+        ", array($USER->get('id')) );
+
+if ($viewids) {
     foreach ($viewids as $viewid) {
-        $view = new View($viewid);
-        $elements['view_' . $viewid] = array(
+        $view = new View($viewid->view);
+        $elements['view_' . $viewid->view] = array(
             'type' => 'checkbox',
             'title' => $view->get('title'),
             'description' => $view->get('description'),
-            'viewlink' => $view->get_url(true, true),
+            'viewlink' => get_config('wwwroot') . 'view/view.php?id=' . $viewid->view,
         );
     }
-    $jsfiles = array('js/preview.js', 'js/export.js');
+    $jsfiles = array('js/preview.js', 'js/export.js', 'lib/pieforms/static/core/elements/textarea.js');
 
     $collections = get_records_sql_array('
         SELECT c.id, c.name, c.description
@@ -126,12 +186,11 @@ $elements['submit'] = array(
 
 $form = pieform(array(
     'name' => 'export',
-    'template' => 'export.php',
-    'templatedir' => pieform_template_dir('export.php'),
+    'template' => 'exportremote.php',
+    'templatedir' => pieform_template_dir('exportremote.php'),
     'autofocus' => false,
     'elements' => $elements
 ));
-
 
 function export_validate(Pieform $form, $values) {
     global $SESSION;
@@ -184,14 +243,24 @@ function export_submit(Pieform $form, $values) {
     $exportdata = array(
         'format'          => $values['format'],
         'what'            => $values['what'],
+        'metadatatitle'   => $values['metadatatitle'],
+        'metadataabstract'=> $values['metadataabstract'],
         'views'           => $views,
-        'includefeedback' => $values['includefeedback'],
-        'repositoryid'    => 0,
-        'collectionuri'   => 0,
+        'includefeedback' => false,
+        'repositoryid'    => $values['repositories'],
+        'collectionuri'   => $values['collections'],
+        'licenceid'         => $values['licences']
     );
     $SESSION->set('exportdata', $exportdata);
+    $js =
+    <<<EOF
+    addLoadEvent(function() {
+      iFrameResizer.resize();
+    });
+EOF;
 
-    $smarty = smarty();
+    $smarty = smarty(array('jquery', 'export/sword/js/resizeiframe.js'));
+    $smarty->assign('INLINEJAVASCRIPT', $js);
     $smarty->assign('heading', '');
     $smarty->display('export/export.tpl');
     exit;
@@ -203,8 +272,35 @@ $smarty = smarty(
     array(),
     array('stylesheets' => array('style/views.css'))
 );
+$js =
+<<<EOF
+    function toggleFieldset(){
+        forEach(getElementsByTagAndClassName('fieldset', 'collapsible', 'addmetadata-container'), function(fieldset) {
+            if (!hasElementClass(fieldset, 'pieform-fieldset')) {
+                return;
+            }
+            var legend = getFirstElementByTagAndClassName('legend', null, fieldset);
+            if (legend.firstChild.tagName == 'A') {
+                connect(legend.firstChild, 'onclick', function(e) {
+                    toggleElementClass('collapsed', fieldset);
+                    var input = getFirstElementByTagAndClassName('input', 'open-fieldset-input', legend);
+                    if (input) {
+                        input.value = !hasElementClass(fieldset, 'collapsed');
+                    }
+                    e.stop();
+                });
+            }
+        });
+    }
+    addLoadEvent(function() {
+        hideElement($('exportsubmitcontainer'));
+        toggleFieldset();
+    });
+EOF;
+
+$smarty->assign('INLINEJAVASCRIPT', $js);
 $smarty->assign('PAGEHEADING', TITLE);
 $smarty->assign('pagedescription', get_string('exportportfoliodescription', 'export'));
 $smarty->assign('form', $form);
-$smarty->assign('exporttarget', 'local');
+$smarty->assign('exporttarget', 'remote');
 $smarty->display('export/exportform.tpl');

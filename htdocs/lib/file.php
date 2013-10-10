@@ -363,6 +363,12 @@ function file_mime_type($file) {
             $mimetypes = get_records_assoc('artefact_file_mime_types', '', '', '', 'description,mimetype');
         }
         $ext = strtolower(array_pop(explode('.', $basename)));
+        if ($ext == 'jpg') {
+            $ext = 'jpeg';
+        }
+        if ($ext == 'css') {
+            return 'text/css';
+        }
         if (isset($mimetypes[$ext])) {
             return $mimetypes[$ext]->mimetype;
         }

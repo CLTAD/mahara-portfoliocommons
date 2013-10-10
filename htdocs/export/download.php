@@ -63,14 +63,14 @@ function export_iframe_die($message, $link=null) {
 }
 
 /**
- * Registered as the progress report handler for the export. Streams updates 
+ * Registered as the progress report handler for the export. Streams updates
  * back to the browser
  *
  * @param int $percent   How far complete the export is
  * @param string $status A human-readable string describing the current step
  */
-function export_iframe_progress_handler($percent, $status) {
-    print_iframe_progress_handler($percent, $status);
+function export_iframe_progress_handler($percent, $status, $finalreport="") {
+    print_iframe_progress_handler($percent, $status, $finalreport);
     flush();
 }
 
@@ -78,7 +78,9 @@ function export_iframe_progress_handler($percent, $status) {
 // Bail if we don't have enough data to do an export
 if (!isset($exportdata['format'])
     || !isset($exportdata['what'])
-    || !isset($exportdata['views'])) {
+    || !isset($exportdata['views'])
+    || !isset($exportdata['repositoryid'])
+    || !isset($exportdata['collectionuri'])) {
     export_iframe_die(get_string('unabletogenerateexport', 'export'));
     exit;
 }
@@ -87,13 +89,21 @@ safe_require('export', $exportdata['format']);
 $user = new User();
 $user->find_by_id($USER->get('id'));
 $class = generate_class_name('export', $exportdata['format']);
+$targetinfo = array('repositoryid'  => $exportdata['repositoryid'],
+                    'collectionuri' => $exportdata['collectionuri'],
+                    'licenceid'     => $exportdata['licenceid'],
+                    'metadata'      => array(
+                            'metadatatitle'     => $exportdata['metadatatitle'],
+                            'metadataabstract'  => $exportdata['metadataabstract']
+                    )
+            );
 
 switch($exportdata['what']) {
 case 'all':
-    $exporter = new $class($user, PluginExport::EXPORT_ALL_VIEWS, PluginExport::EXPORT_ALL_ARTEFACTS, 'export_iframe_progress_handler');
+    $exporter = new $class($user, PluginExport::EXPORT_ALL_VIEWS, PluginExport::EXPORT_ALL_ARTEFACTS, 'export_iframe_progress_handler', $targetinfo);
     break;
 case 'views':
-    $exporter = new $class($user, $exportdata['views'], PluginExport::EXPORT_ARTEFACTS_FOR_VIEWS, 'export_iframe_progress_handler');
+    $exporter = new $class($user, $exportdata['views'], PluginExport::EXPORT_ARTEFACTS_FOR_VIEWS, 'export_iframe_progress_handler', $targetinfo);
     break;
 default:
     export_iframe_die(get_string('unabletoexportportfoliousingoptions', 'export'));
@@ -107,12 +117,18 @@ try {
     export_iframe_die($e->getMessage(), get_config('wwwroot') . 'view/index.php');
 }
 
-// Store the filename in the session, and redirect the iframe to it to trigger 
-// the download. Here it would be nice to trigger the download for everyone, 
+// Store the filename in the session, and redirect the iframe to it to trigger
+// the download. Here it would be nice to trigger the download for everyone,
 // but alas this is not possible for people without javascript.
 $SESSION->set('exportfile', $exporter->get('exportdir') . $zipfile);
-$continueurl = 'download.php';
-$continueurljs = get_config('wwwroot') . 'export/index.php';
+if ($exportdata['repositoryid'] == 0) {
+    $continueurl = 'download.php';
+    $continueurljs = get_config('wwwroot') . 'export/index.php';
+} else {
+    $continueurljs = get_config('wwwroot') . 'export/remote.php';
+    $continueurl = $continueurljs;
+}
+
 $result = $SESSION->get('messages');
 if (empty($result)) {
     $strexport   = get_string('exportgeneratedsuccessfully1', 'export');

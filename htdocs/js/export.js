@@ -79,13 +79,71 @@ addLoadEvent(function() {
     forEach(getElementsByTagAndClassName('input', 'radio', 'exportformat-buttons'), function(radio) {
         connect(radio, 'onclick', function(e) {
             hideElement($('includefeedback'));
+            hideElement($('selectrepository'));
+            hideElement($('selectcollection'));
             if (radio.checked) {
                 if (radio.value == 'html') {
                     showElement($('includefeedback'));
                 }
+                else if (radio.value == 'sword') {
+                    showElement($('selectrepository'));
+                }
             }
         });
     });
+
+    // retrieve collections for selected repository
+    connect($('export_repositories'), 'onchange', loadCollections);
+
+    function loadCollections(e) {
+        hideElement($('selectcollection'));
+        hideElement($('exportsubmitcontainer')); // disable export until we have a valid remote target
+        var oldmessage = getFirstElementByTagAndClassName('div', null, 'messages');
+        if (oldmessage) {
+            fade(oldmessage, {afterFinish: partial(removeElement, oldmessage)});
+        }
+        if (this.selectedIndex != 0) {
+            var pd = {'repository': this.value};
+            sendjsonrequest(config['wwwroot'] + 'export/sword/swordcollections.json.php', pd, 'POST', function (data) {
+                rewriteCollectionOptions(data);
+                if (data.data.defaultcollection) {
+                    hideElement($('selectcollection'));
+                } else {
+                    showElement($('selectcollection'));
+                }
+                showElement($('exportsubmitcontainer'));
+            });
+        } else {
+            // no repository selected - reset collections values
+            resetCollections();
+        }
+    };
+
+    function rewriteCollectionOptions(data) {
+        var collectionSelection = $('export_collections');
+        collectionSelection.options.length = 0;
+        var offset = 0;
+
+        if (data.data.defaultcollection) {
+            collectionSelection.options[0] = new Option('default collection selected', data.data.defaultcollection, false, false);
+        } else {
+
+            for (i=0; i<data.data.data.length; i++) {
+                for (c=0; c<data.data.data[i].collections.length; c++) {
+                    var coll = data.data.data[i].collections[c];
+                    var wspacetitle = data.data.data[i].workspacetitle;
+                    collectionSelection.options[c + offset] = new Option(coll.sac_colltitle + ' (' + wspacetitle + ')', coll.sac_href[0], false, false);
+                } 
+                offset += data.data.data[i].collections.length;
+            }
+        }
+    }
+
+    function resetCollections() {
+        var collectionSelection = $('export_collections');
+        collectionSelection.options.length = 0;
+        hideElement($('selectcollection'));    
+    }
 
     // Hook up 'click to preview' links
     forEach(getElementsByTagAndClassName('a', 'viewlink', containers.views.container), function(i) {

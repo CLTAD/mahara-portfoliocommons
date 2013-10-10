@@ -3,15 +3,14 @@
 function export_form_cell_html($element) {
     global $THEME;
     $strclicktopreview = get_string('clicktopreview', 'export');
+    $previewimg = $THEME->get_url('images/icon-display.gif');
     $strpreview = get_string('Preview');
     $element['description'] = clean_html($element['description']);
 return <<<EOF
 <td>
-<div class="checkbox">{$element['html']}</div>
-<div class="labeldescriptpreview">{$element['labelhtml']}
-{$element['description']}
-<a href="{$element['viewlink']}" class="viewlink nojs-hidden-inline" target="_blank">{$strclicktopreview}</a>
-</div>
+{$element['html']} {$element['labelhtml']}
+<div>{$element['description']}</div>
+<div><a href="{$element['viewlink']}" class="viewlink nojs-hidden-inline" target="_blank"><img src="{$previewimg}" alt=""> {$strclicktopreview}</a></div>
 </td>
 EOF;
 }
@@ -20,6 +19,22 @@ echo $form_tag;
 echo '<h3>' . get_string('chooseanexportformat', 'export') . '</h3>';
 echo '<div class="element" id="exportformat-buttons">';
 echo '<div>' . $elements['format']['html'] . '</div>';
+echo '</div>';
+echo '<h3>' . get_string('choosealicence', 'export.sword') . '</h3>';
+echo '<div class="element" id="exportlicences">';
+echo '<div>' . $elements['licences']['html'] . '</div>';
+echo '</div>';
+echo '<div id="selectrepository">';
+echo '<h3>' . get_string('choosearepository', 'export.sword') . '</h3>';
+echo '<div class="element" id="exportrepositories">';
+echo '<div>' . $elements['repositories']['html'] . '</div>';
+echo '</div>';
+echo '</div>';
+echo '<div id="selectcollection" class="hidden">';
+echo '<h3>' . get_string('chooseacollection', 'export.sword') . '</h3>';
+echo '<div class="element" id="exportcollections">';
+echo '<div>' . $elements['collections']['html'] . '</div>';
+echo '</div>';
 echo '</div>';
 echo '<h3>' . get_string('whatdoyouwanttoexport', 'export') . '</h3>';
 echo '<div class="element" id="whattoexport-buttons">';
@@ -74,12 +89,36 @@ if ($body) {
 
 echo '</fieldset></div>';
 
+echo '<div id="addmetadata-container">';
+echo '<fieldset class="pieform-fieldset collapsible collapsed">';
+echo '<legend>';
+echo '<a href="">Add Metadata</a>';
+echo '</legend>';
+
+echo '<div id="setmetadatatitle">';
+echo '<label for="metadatatitle">' . $elements['metadatatitle']['title'] . '</label>';
+echo '<div class="description">' . $elements['metadatatitle']['description'] . '</div>';
+echo '<div class="element" id="metadatatitle">';
+echo '<div>' . $elements['metadatatitle']['html'] . '</div>';
+echo '</div>';
+echo '</div>';
+
+echo '<div id="setmetadataabstract">';
+echo '<label for="metadataabstract">' . $elements['metadataabstract']['title'] . '</label>';
+echo '<div class="description">' . $elements['metadataabstract']['description'] . '</div>';
+echo '<div class="textarea" id="metadataabstract">';
+echo '<div>' . $elements['metadataabstract']['html'] . '</div>';
+echo '</div>';
+echo '</div>';
+
+echo '</div>';
+
 $body = array();
 $row = $col = 0;
 foreach ($elements as $key => $element) {
     if (substr($key, 0, 11) == 'collection_') {
-        $body[$row][$col] = "<td><div class='checkbox'>{$element['html']}</div><div class='labeldescriptpreview'>{$element['labelhtml']}"
-            . '' . hsc($element['description']) . '</div></td>';
+        $body[$row][$col] = "<td>{$element['html']} {$element['labelhtml']}"
+            . '<div>' . hsc($element['description']) . '</div></td>';
         $col++;
         if ($col % 3 == 0) {
             $row++;
@@ -119,10 +158,6 @@ if ($body) {
     echo '</fieldset></div>';
 }
 
-echo '<div id="includefeedback">';
-echo $elements['includefeedback']['html'] . ' ' . $elements['includefeedback']['labelhtml'];
-echo '<div class="radio-description">' . $elements['includefeedback']['description'] . '</div>';
-echo '</div>';
 echo '<div id="exportsubmitcontainer">';
 echo $elements['submit']['html'];
 echo '</div>';

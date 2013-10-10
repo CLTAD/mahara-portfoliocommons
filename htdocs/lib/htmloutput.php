@@ -40,7 +40,7 @@ function print_export_head($stylesheets) {
             html, body {
                 margin: 0;
                 padding: 0;
-                background-color: #808080;
+                background-color: #FFF;
             }
         </style>
     </head>
@@ -58,20 +58,22 @@ function print_export_iframe_die($message, $link=null) {
     echo '<div class="progress-bar" style="width: 100%;"><p>' . $message . '</p></div></body></html>';
 }
 
-function print_iframe_progress_handler($percent, $status) {
+function print_iframe_progress_handler($percent, $status, $finalreport="") {
     // "Erase" the current output with a new background div
     echo '<div style="width: 100%; background-color: #808080;" class="progress-bar"></div>';
     // The progress bar itself
     echo '<div class="progress-bar" style="width: ' . intval($percent) . '%;"></div>' . "\n";
     // The status text
     echo '<p class="progress-text">' . hsc($status) . "</p>\n";
+    // The final status report
+    echo '<div class="progress-final-report">' . $finalreport . '</div>';
 }
 
 function print_export_footer($strexportgenerated, $continueurl, $continueurljs, $jsmessages=array(), $newlocation) {
 ?>
         <script type="text/javascript">
             document.write('<div class="progress-bar" style="width: 100%;"><p><?php echo $strexportgenerated . ' <a href="' . $continueurljs . '" target="_top">' . get_string('continue', 'export') . '</a>'; ?></p></div>');
-            if (!window.opera) {
+            if (!window.opera && $newlocation !== false) {
                 // Opera can't handle this for some reason - it vomits out the
                 // download inline in the iframe
                 document.location = '<?php echo $newlocation; ?>';
@@ -84,7 +86,12 @@ function print_export_footer($strexportgenerated, $continueurl, $continueurljs, 
             }
         </script>
         <div class="progress-bar" style="width: 100%;">
-            <p><?php echo $strexportgenerated . ' <a href="' . $continueurl . '" target="_top">' . get_string('clickheretodownload', 'export') . '</a>'; ?></p>
+            <p>
+            <?php
+                // a bit of a cludge here...
+                echo $strexportgenerated . ' <a href="' . $continueurl . '" target="_top">' . (($continueurl == 'download.php')? get_string('clickheretodownload', 'export') : get_string('continue', 'export')) . '</a>';
+            ?>
+            </p>
         </div>
     </body>
 </html>

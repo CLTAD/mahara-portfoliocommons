@@ -1067,3 +1067,16 @@ table.maharatable tr#instconf_otherblocksmsg_container td {
     padding: 5px;
     font-style: italic;
 }
+#addmetadata-container fieldset{
+    margin: 20px 0 !important;
+    border-radius: 0;
+}
+#addmetadata-container fieldset.collapsed legend a {
+    color: #1E6297;
+    font-size: 1.33em;
+    background: url("raw/static/images/icon_fieldset_left.gif") no-repeat scroll 2px center transparent;
+}
+#addmetadata-container a:visited, #addmetadata-container a:focus, #addmetadata-container a:link {
+    color: #1E6297;
+    font-size: 1.33em;
+}

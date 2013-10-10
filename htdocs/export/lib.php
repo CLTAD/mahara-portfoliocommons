@@ -162,8 +162,12 @@ abstract class PluginExport extends Plugin {
      *                             - int - artefact ids
      *                             - stdclass objects - db rows
      *                             - ArtefactType subclasses
+     * @param mixed $target    can be:
+     *                         - array, containing:
+     *                         - int - repository id
+     *                         - string - repository collection uri
      */
-    public function __construct(User $user, $views, $artefacts, $progresscallback=null) {
+    public function __construct(User $user, $views, $artefacts, $progresscallback=null, $targetinfo=null) {
         if (!is_null($progresscallback)) {
             if (is_callable($progresscallback)) {
                 $this->progresscallback = $progresscallback;
@@ -317,6 +321,14 @@ abstract class PluginExport extends Plugin {
         }
         return $this->{$field};
     }
+    
+    /**
+     * This is used to determine if the plugin should appear in the list of local or 
+     * remote export options
+     */
+    public static function has_remote_target() {
+        return false;
+    }
 
     /**
      * Notifies the registered progress callback about the progress in generating the export.
@@ -336,10 +348,10 @@ abstract class PluginExport extends Plugin {
      * @param string $status A string describing the current status of the 
      *                       export - e.g. 'Exporting Artefact (20/75)'
      */
-    protected function notify_progress_callback($percent, $status) {
+    protected function notify_progress_callback($percent, $status, $finalreport="") {
         if ($this->progresscallback) {
             call_user_func_array($this->progresscallback, array(
-                $percent, $status
+                $percent, $status, $finalreport
             ));
         }
     }
